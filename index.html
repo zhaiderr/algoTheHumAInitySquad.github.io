@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Algorithm Visualizer</title>
+    <style>
+        :root {
+            --primary-color: #0066CC;
+            --secondary-color: #EAF2F8;
+            --text-color: #1C2833;
+            --background-color: #FFFFFF;
+            --highlight-color: #FF5733;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #34495E;
+            --secondary-color: #2C3E50;
+            --text-color: #ECF0F1;
+            --background-color: #2C3E50;
+            --highlight-color: #F39C12;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.5em;
+            position: relative;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: var(--background-color);
+            border-bottom: 1px solid #ccc;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+
+        #controls input, #controls button, #controls select {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #controls button:hover {
+            background-color: var(--highlight-color);
+            color: white;
+        }
+
+        #graph-container {
+            width: 100%;
+            height: 60vh;
+            border: 1px solid #ccc;
+            margin: 20px 0;
+            border-radius: 5px;
+            background-color: var(--background-color);
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            font-size: 0.9em;
+        }
+
+        .output {
+            padding: 20px;
+            background-color: var(--background-color);
+            border-radius: 5px;
+            margin: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid var(--highlight-color);
+            transition: background-color 0.3s;
+        }
+
+        .output h3 {
+            font-size: 1.2em;
+            color: var(--highlight-color);
+            margin-bottom: 10px;
+        }
+
+        .output-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            border-radius: 5px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+
+        .output-item span {
+            font-weight: bold;
+            color: var(--highlight-color);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .theme-toggle:focus {
+            outline: none;
+        }
+
+        .loading {
+            font-size: 1.2em;
+            font-style: italic;
+            color: var(--highlight-color);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Graph Algorithm Visualizer
+        <button class="theme-toggle" id="theme-toggle">🌙</button>
+    </header>
+    <div id="controls">
+        <input type="text" id="from" placeholder="From (Node ID)">
+        <input type="text" id="to" placeholder="To (Node ID)">
+        <input type="number" id="cost" placeholder="Cost (optional)">
+        <button id="add-node">Add Node/Edge</button>
+        <select id="algorithm">
+            <option value="bfs">BFS</option>
+            <option value="dfs">DFS</option>
+            <option value="ucs">UCS</option>
+        </select>
+        <button id="run-algo">Run Algorithm</button>
+    </div>
+    <div id="graph-container"></div>
+    <div class="output" id="output">
+        <h3>Algorithm Output:</h3>
+        <div id="loading" class="loading" style="display: none;">Running algorithm...</div>
+        <div id="path" class="output-item"></div>
+        <div id="cost" class="output-item"></div>
+        <div id="steps" class="output-item"></div>
+    </div>
+    <footer>
+        &copy; 2024 Graph Algorithm Visualizer | The HumAInity Squad
+    </footer>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        let graphData = {
+            nodes: [],
+            edges: []
+        };
+
+        const fromInput = document.getElementById('from');
+        const toInput = document.getElementById('to');
+        const costInput = document.getElementById('cost');
+        const addNodeButton = document.getElementById('add-node');
+        const algorithmSelect = document.getElementById('algorithm');
+        const runAlgoButton = document.getElementById('run-algo');
+        const output = document.getElementById('output');
+        const pathOutput = document.getElementById('path');
+        const costOutput = document.getElementById('cost');
+        const stepsOutput = document.getElementById('steps');
+        const loadingIndicator = document.getElementById('loading');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.innerText = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (theme === 'light') {
+                theme = 'dark';
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeToggle.innerText = '☀️';
+            } else {
+                theme = 'light';
+                document.documentElement.setAttribute('data-theme', 'light');
+                themeToggle.innerText = '🌙';
+            }
+            localStorage.setItem('theme', theme);
+        });
+
+        const svg = d3.select("#graph-container")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%");
+
+        function renderGraph() {
+            svg.selectAll("*").remove();
+
+            svg.selectAll("line")
+                .data(graphData.edges)
+                .enter()
+                .append("line")
+                .attr("x1", d => graphData.nodes.find(n => n.id === d.source).x)
+                .attr("y1", d => graphData.nodes.find(n => n.id === d.source).y)
+                .attr("x2", d => graphData.nodes.find(n => n.id === d.target).x)
+                .attr("y2", d => graphData.nodes.find(n => n.id === d.target).y)
+                .attr("stroke", "black");
+
+            svg.selectAll("circle")
+                .data(graphData.nodes)
+                .enter()
+                .append("circle")
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .attr("r", 10)
+                .attr("fill", "blue");
+
+            svg.selectAll("text")
+                .data(graphData.nodes)
+                .enter()
+                .append("text")
+                .attr("x", d => d.x + 12)
+                .attr("y", d => d.y + 4)
+                .text(d => d.id);
+        }
+
+        addNodeButton.addEventListener('click', () => {
+            const from = fromInput.value.trim();
+            const to = toInput.value.trim();
+            const cost = parseFloat(costInput.value.trim());
+
+            if (from && !graphData.nodes.some(node => node.id === from)) {
+                graphData.nodes.push({ id: from, x: Math.random() * 500, y: Math.random() * 400 });
+            }
+
+            if (to && !graphData.nodes.some(node => node.id === to)) {
+                graphData.nodes.push({ id: to, x: Math.random() * 500, y: Math.random() * 400 });
+            }
+
+            if (from && to) {
+                graphData.edges.push({ source: from, target: to, cost: cost || 0 });
+            }
+
+            renderGraph();
+        });
+
+        runAlgoButton.addEventListener('click', () => {
+            const algorithm = algorithmSelect.value;
+            const startNode = prompt("Enter the start node:");
+            const endNode = prompt("Enter the end node:");
+
+            if (!startNode || !endNode) {
+                alert("Start and end nodes are required.");
+                return;
+            }
+
+            loadingIndicator.style.display = 'block';
+            setTimeout(() => {
+                const result = runAlgorithm(algorithm, startNode, endNode);
+
+                pathOutput.innerHTML = `<span>Path:</span> ${result.path.join(' → ')}`;
+                costOutput.innerHTML = `<span>Cost:</span> ${result.cost}`;
+                stepsOutput.innerHTML = `<span>Steps:</span> ${result.steps}`;
+
+                loadingIndicator.style.display = 'none';
+            }, 1000); // Simulating algorithm execution time
+        });
+
+        function runAlgorithm(algo, start, end) {
+            const adjacencyList = buildAdjacencyList();
+            switch (algo) {
+                case 'bfs':
+                    return bfs(adjacencyList, start, end);
+                case 'dfs':
+                    return dfs(adjacencyList, start, end);
+                case 'ucs':
+                    return ucs(adjacencyList, start, end);
+                default:
+                    return { path: [], cost: 0, steps: 0 };
+            }
+        }
+
+        function buildAdjacencyList() {
+            const adjacencyList = {};
+            graphData.nodes.forEach(node => {
+                adjacencyList[node.id] = [];
+            });
+            graphData.edges.forEach(edge => {
+                adjacencyList[edge.source].push({ target: edge.target, cost: edge.cost });
+            });
+            return adjacencyList;
+        }
+
+        function bfs(graph, start, goal) {
+            const queue = [[start]];
+            const visited = new Set();
+            let steps = 0;
+
+            while (queue.length > 0) {
+                const path = queue.shift();
+                const node = path[path.length - 1];
+
+                if (visited.has(node)) continue;
+                visited.add(node);
+                steps++;
+
+                if (node === goal) {
+                    return { path, cost: 0, steps };
+                }
+
+                for (const neighbor of graph[node] || []) {
+                    queue.push([...path, neighbor.target]);
+                }
+            }
+
+            return { path: [], cost: 0, steps };
+        }
+
+        function dfs(graph, start, goal, visited = new Set(), path = [], steps = 0) {
+            path.push(start);
+            visited.add(start);
+
+            if (start === goal) {
+                return { path, cost: 0, steps };
+            }
+
+            for (const neighbor of graph[start] || []) {
+                if (!visited.has(neighbor.target)) {
+                    const result = dfs(graph, neighbor.target, goal, visited, [...path], steps + 1);
+                    if (result.path.length > 0) {
+                        return result;
+                    }
+                }
+            }
+
+            return { path: [], cost: 0, steps };
+        }
+
+        function ucs(graph, start, goal) {
+            const pq = [{ path: [start], cost: 0 }];
+            const visited = new Set();
+            let steps = 0;
+
+            while (pq.length > 0) {
+                pq.sort((a, b) => a.cost - b.cost);
+                const { path, cost } = pq.shift();
+                const node = path[path.length - 1];
+
+                if (visited.has(node)) continue;
+                visited.add(node);
+                steps++;
+
+                if (node === goal) {
+                    return { path, cost, steps };
+                }
+
+                for (const neighbor of graph[node] || []) {
+                    pq.push({
+                        path: [...path, neighbor.target],
+                        cost: cost + neighbor.cost
+                    });
+                }
+            }
+
+            return { path: [], cost: 0, steps };
+        }
+
+        renderGraph();
+    </script>
+</body>
+</html>
