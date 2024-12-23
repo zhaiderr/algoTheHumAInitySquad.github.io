@@ -145,6 +145,21 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+
+        #clear-button {
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: var(--highlight-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        #clear-button:hover {
+            background-color: #FF4500;
+        }
     </style>
 </head>
 <body>
@@ -163,6 +178,7 @@
             <option value="ucs">UCS</option>
         </select>
         <button id="run-algo">Run Algorithm</button>
+        <button id="clear-button">Clear Graph</button>
     </div>
     <div id="graph-container"></div>
     <div class="output" id="output">
@@ -173,7 +189,7 @@
         <div id="steps" class="output-item"></div>
     </div>
     <footer>
-        &copy; 2024 Graph Algorithm Visualizer | The HumAInity Squad
+        &copy; 2024 Graph Algorithm Visualizer | The Humanity Squad
     </footer>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
@@ -188,7 +204,7 @@
         const addNodeButton = document.getElementById('add-node');
         const algorithmSelect = document.getElementById('algorithm');
         const runAlgoButton = document.getElementById('run-algo');
-        const output = document.getElementById('output');
+        const clearButton = document.getElementById('clear-button');
         const pathOutput = document.getElementById('path');
         const costOutput = document.getElementById('cost');
         const stepsOutput = document.getElementById('steps');
@@ -267,6 +283,14 @@
                 graphData.edges.push({ source: from, target: to, cost: cost || 0 });
             }
 
+            renderGraph();
+        });
+
+        clearButton.addEventListener('click', () => {
+            graphData = { nodes: [], edges: [] };
+            pathOutput.textContent = "";
+            costOutput.textContent = "";
+            stepsOutput.textContent = "";
             renderGraph();
         });
 
@@ -395,3 +419,4 @@
     </script>
 </body>
 </html>
+
